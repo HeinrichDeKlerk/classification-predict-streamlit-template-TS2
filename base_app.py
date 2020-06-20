@@ -35,7 +35,7 @@ import joblib,os
 import pandas as pd
 from markdown import markdown
 from bs4 import BeautifulSoup
-
+from PIL import Image
 # Vectorizer
 news_vectorizer = open("resources/tfidfvect.pkl","rb")
 tweet_cv = joblib.load(news_vectorizer) # loading your vectorizer from the pkl file
@@ -102,21 +102,16 @@ selection = st.sidebar.radio(label="",options = ["Information","Exploratory Data
 
 # Building out the "Information" page
 if selection == "Information":
-    st.info("General Information")
+    st.info("With the change in time, consumers have become more conscious about acquiring products/services from brands that uphold certain values and ideals. They also consider the service provider's stances towards issues such as climate change. In order to appeal to these consumers, organisations should understand their sentiments. They need to understand how their products will be received whilst trying to decrease their environmental impact or carbon footprint. This can be achieved using Machine Learning.")
+
     # You can read a markdown file from supporting resources folder
     if st.button("How does the app work"):
         app_info = markdown(open("resources/info.md").read())   
         st.markdown(app_info,unsafe_allow_html=True)
-
-    descrip = (pd.DataFrame({
-        "Class":[2,1,0,-1],
-        "Description":["News: the tweet links to factual news about climate change",
-        "Pro: the tweet supports the belief of man-made climate change",
-        "Neutral: the tweet neither supports nor refutes the belief of man-made climate change",
-        "Anti: the tweet does not believe in man-made climate change"]
-    }))
-    descrip = descrip.set_index('Class')
-    st.table(descrip)
+        
+    st.subheader("Description of Sentiment Classes")
+    descrip_image = Image.open("resources/imgs/climate_data_sentiment_description.png")
+    st.image(descrip_image, use_column_width=True)
 
     st.subheader("Raw Twitter data and label")
     if st.checkbox('Show raw data'): # data is hidden if box is unchecked
