@@ -34,8 +34,21 @@ import joblib,os
 # Data dependencies
 import pandas as pd
 from markdown import markdown
+
+# Text classification
+from nltk.tokenize import word_tokenize
+
+# Visual dependencies
+import matplotlib
+import matplotlib.pyplot as plt
+import seaborn as sns
 from bs4 import BeautifulSoup
 from PIL import Image
+import plotly.graph_objects as go
+
+matplotlib.use("Agg")
+plt.style.use('ggplot')
+
 # Vectorizer
 news_vectorizer = open("resources/tfidfvect.pkl","rb")
 tweet_cv = joblib.load(news_vectorizer) # loading your vectorizer from the pkl file
@@ -65,6 +78,8 @@ def main():
             st.info("With the change in time, consumers have become more conscious about acquiring products/services from brands that uphold certain values and ideals. They also consider the service provider's stances towards issues such as climate change. In order to appeal to these consumers, organisations should understand their sentiments. They need to understand how their products will be received whilst trying to decrease their environmental impact or carbon footprint. This can be achieved using Machine Learning.")
     
             # You can read a markdown file from supporting resources folder
+            #if st.button("What is Machine Learning"):
+                    #to add info on machine learning here
             if st.button("How does the app work"):
                     app_info = markdown(open("resources/info.md").read())   
                     st.markdown(app_info,unsafe_allow_html=True)
@@ -75,7 +90,7 @@ def main():
     
             st.subheader("Raw Twitter data and label")
             if st.checkbox('Show raw data'): # data is hidden if box is unchecked
-                    st.write(raw[['sentiment', 'message']]) # will write the df to the page
+                    st.write(raw) # will write the df to the page
     	
     # Building out the predication page
     if selection == "Prediction":
@@ -105,7 +120,18 @@ def main():
                         st.write(raw.tail())
                     else:
                         st.write(raw.head())
-    
+
+            # Add image description of sentiment
+            st.subheader("Description of Sentiment Classes")
+            descrip_image = Image.open("resources/imgs/climate_data_sentiment_description.png")
+            st.image(descrip_image, use_column_width=True)
+
+            # Sentiment Distribution
+            fig, ax = plt.subplots(figsize=(10, 5))
+            graph = sns.countplot(x = 'sentiment', data = raw)
+            plt.title('Distribution of Sentiment classes count')
+            st.pyplot()
+
             # Viewing each sentiment
             sentiment = raw['sentiment'].unique()
             selected_sentiment = st.multiselect("View analysis by sentiment",sentiment)
@@ -113,6 +139,22 @@ def main():
             # mask to filter dataframe
             mask_sentiment = raw['sentiment'].isin(selected_sentiment)
             data = raw[mask_sentiment]
+            st.write(data)
+
+            # Tweet length distribution by word count, character count, and punctuation count
+            eda_data = raw.copy()
+            # Extract URL's
+            pattern_url = r'(http[s]?://(?:[A-Za-z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9A-Fa-f][0-9A-Fa-f]))+)'
+            eda_data['Url'] = eda_data['message'].str.extract(pattern_url)
+            
+            # Tokenize tweets with nltk 
+            #tokeniser = word_tokenize()
+            eda_data['tokens'] = eda_data['message'].apply(word_tokenize)
+            st.write(eda_data)
+
+            # Create graph for Tweet length distribution
+
+
     
     # Building the insights page
     if selection == "Insights":
