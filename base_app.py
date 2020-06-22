@@ -146,13 +146,47 @@ def main():
             # Extract URL's
             pattern_url = r'(http[s]?://(?:[A-Za-z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9A-Fa-f][0-9A-Fa-f]))+)'
             eda_data['Url'] = eda_data['message'].str.extract(pattern_url)
+            # Replace URL with string 'web-url'
+            eda_data['message'] = eda_data['message'].replace(pattern_url, 'web-url', regex=True)
             
             # Tokenize tweets with nltk 
             #tokeniser = word_tokenize()
             eda_data['tokens'] = eda_data['message'].apply(word_tokenize)
+            eda_data['tweet_length'] = eda_data['tokens'].str.len()
+            
+
+            # Tweet Character count column
+            eda_data['character_count'] = eda_data['message'].apply(lambda c: len(c))
             st.write(eda_data)
 
+            # Create graph for Tweet character distribution
+            fig, ax = plt.subplots()
+            #create graphs
+            sns.kdeplot(eda_data['character_count'][eda_data['sentiment'] == -1], shade = True, label = 'anti')
+            sns.kdeplot(eda_data['character_count'][eda_data['sentiment'] == 0], shade = True, label = 'neutral')
+            sns.kdeplot(eda_data['character_count'][eda_data['sentiment'] == 1], shade = True, label = 'pro')
+            sns.kdeplot(eda_data['character_count'][eda_data['sentiment'] == 2], shade = True, label = 'Fact')
+            #set title and labels plot
+            plt.title('Distribution of Tweet Character Count')
+            plt.xlabel('Count of Characters')
+            plt.ylabel('Density')
+            st.pyplot()
+
+
+
+            plt.figure()
             # Create graph for Tweet length distribution
+            fig, ax = plt.subplots()
+            #create graphs
+            sns.kdeplot(eda_data['tweet_length'][eda_data['sentiment'] == -1], shade = True, label = 'anti')
+            sns.kdeplot(eda_data['tweet_length'][eda_data['sentiment'] == 0], shade = True, label = 'neutral')
+            sns.kdeplot(eda_data['tweet_length'][eda_data['sentiment'] == 1], shade = True, label = 'pro')
+            sns.kdeplot(eda_data['tweet_length'][eda_data['sentiment'] == 2], shade = True, label = 'Fact')
+            #set title and plot
+            plt.title('Distribution of Tweet Word Count')
+            plt.xlabel('Count of words')
+            plt.ylabel('Density')
+            st.pyplot()
 
 
     
