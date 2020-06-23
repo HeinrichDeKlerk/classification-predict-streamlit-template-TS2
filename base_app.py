@@ -37,6 +37,8 @@ from markdown import markdown
 
 # Text classification
 from nltk.tokenize import word_tokenize
+import string
+import re
 
 # Visual dependencies
 import matplotlib
@@ -54,7 +56,19 @@ news_vectorizer = open("resources/tfidfvect.pkl","rb")
 tweet_cv = joblib.load(news_vectorizer) # loading your vectorizer from the pkl file
 
 # Load your raw data
-raw = pd.read_csv("resources/train.csv")
+raw = pd.read_csv("resources/kaggle_train.csv")
+
+# define custom functions to be used
+
+def clean_text(text):
+        text = str(text).lower()
+        text = re.sub('\[.*?\]', '', text)
+        text = re.sub('https?://\S+|www\.\S+', 'URL', text)
+        text = re.sub('<.*?>+', '', text)
+        text = re.sub('[%s]' % re.escape(string.punctuation), '', text)
+        text = re.sub('\n', '', text)
+        text = re.sub('\w*\d\w*', '', text)
+        return text
 
 #@st.cache(persist=True)   # Improve speed and cache data
 
@@ -149,10 +163,16 @@ def main():
             # Replace URL with string 'web-url'
             eda_data['message'] = eda_data['message'].replace(pattern_url, 'web-url', regex=True)
             
+            # Clean text with clean_text() function
+            eda_data['clean_tweet'] = eda_data['message'].apply(lambda x:clean_text(x))
+
             # Tokenize tweets with nltk 
             #tokeniser = word_tokenize()
             eda_data['tokens'] = eda_data['message'].apply(word_tokenize)
             eda_data['tweet_length'] = eda_data['tokens'].str.len()
+            # Keep only alpha numeric characters
+            eda_data['alphanum_only'] = eda_data['message']
+            eda_data['alphanum_only'] = eda_data['alphanum_only'].replace(r'[^a-z0-9]', '', regex=True)
             
 
             # Tweet Character count column
