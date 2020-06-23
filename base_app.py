@@ -58,6 +58,18 @@ tweet_cv = joblib.load(news_vectorizer) # loading your vectorizer from the pkl f
 # Load your raw data
 raw = pd.read_csv("resources/kaggle_train.csv")
 
+# label the sentiments
+def sentiment_label(df_):
+        if df_['sentiment'] == 2:
+                return "News"
+        elif df_['sentiment'] == 1:
+                return "Pro"
+        elif df_['sentiment'] == 0:
+                return "Neutral"
+        elif df_['sentiment'] == -1:
+                return "Anti"
+raw["label"] =  raw.apply(sentiment_label, axis=1)
+
 # define custom functions to be used
 
 def clean_text(text):
@@ -143,15 +155,19 @@ def main():
             # Sentiment Distribution
             fig, ax = plt.subplots(figsize=(10, 5))
             graph = sns.countplot(x = 'sentiment', data = raw)
+            graph = sns.countplot(x = 'label', data = raw)
             plt.title('Distribution of Sentiment classes count')
             st.pyplot()
 
             # Viewing each sentiment
             sentiment = raw['sentiment'].unique()
+            sentiment = raw["label"].unique()
             selected_sentiment = st.multiselect("View analysis by sentiment",sentiment)
     
+
             # mask to filter dataframe
             mask_sentiment = raw['sentiment'].isin(selected_sentiment)
+            mask_sentiment = raw['label'].isin(selected_sentiment)
             data = raw[mask_sentiment]
             st.write(data)
 
