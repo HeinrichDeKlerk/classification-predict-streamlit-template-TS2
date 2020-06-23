@@ -160,13 +160,11 @@ def main():
             st.pyplot()
 
             # Viewing each sentiment
-            sentiment = raw['sentiment'].unique()
             sentiment = raw["label"].unique()
             selected_sentiment = st.multiselect("View analysis by sentiment",sentiment)
     
 
             # mask to filter dataframe
-            mask_sentiment = raw['sentiment'].isin(selected_sentiment)
             mask_sentiment = raw['label'].isin(selected_sentiment)
             data = raw[mask_sentiment]
             st.write(data)
