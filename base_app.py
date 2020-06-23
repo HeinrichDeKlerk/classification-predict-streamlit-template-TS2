@@ -155,58 +155,80 @@ def main():
             data = raw[mask_sentiment]
             st.write(data)
 
-            # Tweet length distribution by word count, character count, and punctuation count
-            eda_data = raw.copy()
-            # Extract URL's
-            pattern_url = r'(http[s]?://(?:[A-Za-z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9A-Fa-f][0-9A-Fa-f]))+)'
-            eda_data['Url'] = eda_data['message'].str.extract(pattern_url)
-            # Replace URL with string 'web-url'
-            eda_data['message'] = eda_data['message'].replace(pattern_url, 'web-url', regex=True)
             
-            # Clean text with clean_text() function
-            eda_data['clean_tweet'] = eda_data['message'].apply(lambda x:clean_text(x))
+            if st.checkbox('View Tweet length distributions'):
 
-            # Tokenize tweets with nltk 
-            #tokeniser = word_tokenize()
-            eda_data['tokens'] = eda_data['message'].apply(word_tokenize)
-            eda_data['tweet_length'] = eda_data['tokens'].str.len()
-            # Keep only alpha numeric characters
-            eda_data['alphanum_only'] = eda_data['message']
-            eda_data['alphanum_only'] = eda_data['alphanum_only'].replace(r'[^a-z0-9]', '', regex=True)
-            
+                    # Tweet length distribution by word count, character count, and punctuation count
+                    eda_data = raw.copy()
+                    # Extract URL's
+                    pattern_url = r'(http[s]?://(?:[A-Za-z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9A-Fa-f][0-9A-Fa-f]))+)'
+                    eda_data['Url'] = eda_data['message'].str.extract(pattern_url)
+                    # Replace URL with string 'web-url'
+                    eda_data['message'] = eda_data['message'].replace(pattern_url, 'web-url', regex=True)
+                    
+                    # Clean text with clean_text() function
+                    eda_data['clean_tweet'] = eda_data['message'].apply(lambda x:clean_text(x))
 
-            # Tweet Character count column
-            eda_data['character_count'] = eda_data['message'].apply(lambda c: len(c))
-            st.write(eda_data)
+                    # Tokenize tweets with nltk 
+                    #tokeniser = word_tokenize()
+                    eda_data['tokens'] = eda_data['message'].apply(word_tokenize)
+                    eda_data['tweet_length'] = eda_data['tokens'].str.len()
+                    # Keep only alpha numeric characters
+                    eda_data['alphanum_only'] = eda_data['message']
+                    eda_data['alphanum_only'] = eda_data['alphanum_only'].replace(r'[^a-z0-9]', '', regex=True)
+                    
 
-            # Create graph for Tweet character distribution
-            fig, ax = plt.subplots()
-            #create graphs
-            sns.kdeplot(eda_data['character_count'][eda_data['sentiment'] == -1], shade = True, label = 'anti')
-            sns.kdeplot(eda_data['character_count'][eda_data['sentiment'] == 0], shade = True, label = 'neutral')
-            sns.kdeplot(eda_data['character_count'][eda_data['sentiment'] == 1], shade = True, label = 'pro')
-            sns.kdeplot(eda_data['character_count'][eda_data['sentiment'] == 2], shade = True, label = 'Fact')
-            #set title and labels plot
-            plt.title('Distribution of Tweet Character Count')
-            plt.xlabel('Count of Characters')
-            plt.ylabel('Density')
-            st.pyplot()
+                    # Tweet Character count column
+                    eda_data['character_count'] = eda_data['message'].apply(lambda c: len(c))
+                    #repeat for punctuation
+                    eda_data['punctuation_count'] = eda_data['message'].apply(lambda x: len([i for i in str(x) if i in string.punctuation]))
+
+                    # Introduce approach
+                    st.markdown('When conducting Exploratory Data Analysis, we try and look at the data from all angles, by inspecting and visualising to extract any insights that we can. This can sometimes give surprising results, and as such we try to explore any possible connections, as well as outliers, or any group/class/type that differs from the rest. In this app we will be exploring the distributions of our data from different aspects, combined with what makes it unique, or where the data is strengthened by similarities. ')
+
+                    st.markdown('The first of these explorations will be in the length of various parts of the Tweet body')
+
+                    # Create graph for Tweet character distribution
+                    fig, ax = plt.subplots()
+                    #create graphs
+                    sns.kdeplot(eda_data['character_count'][eda_data['sentiment'] == -1], shade = True, label = 'anti')
+                    sns.kdeplot(eda_data['character_count'][eda_data['sentiment'] == 0], shade = True, label = 'neutral')
+                    sns.kdeplot(eda_data['character_count'][eda_data['sentiment'] == 1], shade = True, label = 'pro')
+                    sns.kdeplot(eda_data['character_count'][eda_data['sentiment'] == 2], shade = True, label = 'Fact')
+                    #set title and labels plot
+                    plt.title('Distribution of Tweet Character Count')
+                    plt.xlabel('Count of Characters')
+                    plt.ylabel('Density')
+                    st.pyplot()
 
 
 
-            plt.figure()
-            # Create graph for Tweet length distribution
-            fig, ax = plt.subplots()
-            #create graphs
-            sns.kdeplot(eda_data['tweet_length'][eda_data['sentiment'] == -1], shade = True, label = 'anti')
-            sns.kdeplot(eda_data['tweet_length'][eda_data['sentiment'] == 0], shade = True, label = 'neutral')
-            sns.kdeplot(eda_data['tweet_length'][eda_data['sentiment'] == 1], shade = True, label = 'pro')
-            sns.kdeplot(eda_data['tweet_length'][eda_data['sentiment'] == 2], shade = True, label = 'Fact')
-            #set title and plot
-            plt.title('Distribution of Tweet Word Count')
-            plt.xlabel('Count of words')
-            plt.ylabel('Density')
-            st.pyplot()
+                    # Create graph for Tweet length distribution
+                    fig, ax = plt.subplots()
+                    #create graphs
+                    sns.kdeplot(eda_data['tweet_length'][eda_data['sentiment'] == -1], shade = True, label = 'anti')
+                    sns.kdeplot(eda_data['tweet_length'][eda_data['sentiment'] == 0], shade = True, label = 'neutral')
+                    sns.kdeplot(eda_data['tweet_length'][eda_data['sentiment'] == 1], shade = True, label = 'pro')
+                    sns.kdeplot(eda_data['tweet_length'][eda_data['sentiment'] == 2], shade = True, label = 'Fact')
+                    #set title and plot
+                    plt.title('Distribution of Tweet Word Count')
+                    plt.xlabel('Count of words')
+                    plt.ylabel('Density')
+                    st.pyplot()
+
+
+                    # Create graph for Tweet length distribution
+                    fig, ax = plt.subplots()
+                    #create graphs
+                    sns.kdeplot(eda_data['punctuation_count'][eda_data['sentiment'] == -1], shade = True, label = 'anti')
+                    sns.kdeplot(eda_data['punctuation_count'][eda_data['sentiment'] == 0], shade = True, label = 'neutral')
+                    sns.kdeplot(eda_data['punctuation_count'][eda_data['sentiment'] == 1], shade = True, label = 'pro')
+                    sns.kdeplot(eda_data['punctuation_count'][eda_data['sentiment'] == 2], shade = True, label = 'Fact')
+                    #set title and plot
+                    plt.title('Distribution of Tweet Punctuation Count')
+                    plt.xlabel('Count of Punctuation')
+                    plt.ylabel('Density')
+                    st.pyplot()
 
 
     
