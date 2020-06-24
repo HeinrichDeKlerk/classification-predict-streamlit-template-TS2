@@ -97,7 +97,7 @@ def main():
     # Creating sidebar 
     # you can create multiple pages this way
     st.sidebar.title("Pages")
-    selection = st.sidebar.radio(label="",options = ["Information","Exploratory Data Analysis","Insights","Prediction"])
+    selection = st.sidebar.radio(label="",options = ["Information","EDA and Findings","Prediction"])
     
     # Building out the "Information" page
     if selection == "Information":
@@ -137,10 +137,10 @@ def main():
                     # more human interpretable.
                     st.success("Text Categorized as: {}".format(prediction))
         
-    # Building EDA page
+    # Building EDA and Insights page
     #eda = st.sidebar.select()
     if selection == "Exploratory Data Analysis":
-            st.info("Summarize the main characters of the data and get perspective on what the data can tell us.In this regard get more understanding about what it represents and how to apply it.")
+            st.info("Summarize the main characters of the data and gain insight on what the data can tell us. In this regard get more understanding about what it represents and how to apply it.")
             if st.checkbox("Preview DataFrame"):
                     if st.button("Tail"):
                         st.write(raw.tail())
@@ -245,11 +245,6 @@ def main():
                     st.pyplot()
 
 
-    
-    # Building the insights page
-    if selection == "Insights":
-            st.info("Report on the insights gained from the analysis")
-    
     
     st.sidebar.title("About")
     st.sidebar.info(
