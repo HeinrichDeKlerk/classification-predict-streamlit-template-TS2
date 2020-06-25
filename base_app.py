@@ -44,6 +44,7 @@ import re
 import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
+from wordcloud import WordCloud
 from bs4 import BeautifulSoup
 from PIL import Image
 import plotly.graph_objects as go
@@ -58,6 +59,7 @@ tweet_cv = joblib.load(news_vectorizer) # loading your vectorizer from the pkl f
 # Load your raw data
 raw = pd.read_csv("resources/kaggle_train.csv")
 
+
 # label the sentiments
 def sentiment_label(df_):
         if df_['sentiment'] == 2:
@@ -68,10 +70,11 @@ def sentiment_label(df_):
                 return "Neutral"
         elif df_['sentiment'] == -1:
                 return "Anti"
+
 raw["label"] =  raw.apply(sentiment_label, axis=1)
 
 # define custom functions to be used
-
+@st.cache
 def clean_text(text):
         text = str(text).lower()
         text = re.sub('\[.*?\]', '', text)
@@ -82,8 +85,48 @@ def clean_text(text):
         text = re.sub('\w*\d\w*', '', text)
         return text
 
-#@st.cache(persist=True)   # Improve speed and cache data
+@st.cache
+def prep_eda_df(df):
 
+        #preprocess eda data
+        # Tweet length by word count, character count, and punctuation count
+        eda_data = raw.copy()
+        # Extract URL's
+        pattern_url = r'(http[s]?://(?:[A-Za-z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9A-Fa-f][0-9A-Fa-f]))+)'
+        eda_data['Url'] = eda_data['message'].str.extract(pattern_url)
+        # Replace URL with string 'web-url'
+        eda_data['message'] = eda_data['message'].replace(pattern_url, 'web-url', regex=True)
+        
+        # Clean text with clean_text() function
+        eda_data['clean_tweet'] = eda_data['message'].apply(lambda x:clean_text(x))
+
+        # Tokenize tweets with nltk 
+        #tokeniser = word_tokenize()
+        eda_data['tokens'] = eda_data['message'].apply(word_tokenize)
+        eda_data['tweet_length'] = eda_data['tokens'].str.len()
+
+        # Tweet Character count column
+        eda_data['character_count'] = eda_data['message'].apply(lambda c: len(c))
+        #repeat for punctuation
+        eda_data['punctuation_count'] = eda_data['message'].apply(lambda x: len([i for i in str(x) if i in string.punctuation]))
+        
+        return eda_data
+
+eda_data = prep_eda_df(raw)
+
+def wordcloud_gen(df, target, values):
+        sent = list(df[target].unique())
+        dft = train_data.groupby(target)[values].apply(' '.join)
+        for s in sent:
+            text = dft[s]
+            wordcloud = WordCloud(background_color='white', max_words=100, max_font_size=50).generate(text)
+            plt.figure()
+            plt.imshow(wordcloud, interpolation='bilinear')
+            plt.title('Tweets under {} Class'.format(s))
+            plt.axis('off')
+        return
+
+#@st.cache(persist=True)   # Improve speed and cache data
 # The main function where we will build the actual app
 def main():
     """Tweet Classifier App with Streamlit """
@@ -139,7 +182,7 @@ def main():
         
     # Building EDA and Insights page
     #eda = st.sidebar.select()
-    if selection == "Exploratory Data Analysis":
+    if selection == "EDA and Findings":
             st.info("Summarize the main characters of the data and gain insight on what the data can tell us. In this regard get more understanding about what it represents and how to apply it.")
             if st.checkbox("Preview DataFrame"):
                     if st.button("Tail"):
@@ -158,7 +201,8 @@ def main():
             graph = sns.countplot(x = 'label', data = raw)
             plt.title('Distribution of Sentiment classes count')
             st.pyplot()
-
+            
+           
             # Viewing each sentiment
             sentiment = raw["label"].unique()
             selected_sentiment = st.multiselect("View analysis by sentiment",sentiment)
@@ -171,31 +215,6 @@ def main():
 
             
             if st.checkbox('View Tweet length distributions'):
-
-                    # Tweet length distribution by word count, character count, and punctuation count
-                    eda_data = raw.copy()
-                    # Extract URL's
-                    pattern_url = r'(http[s]?://(?:[A-Za-z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9A-Fa-f][0-9A-Fa-f]))+)'
-                    eda_data['Url'] = eda_data['message'].str.extract(pattern_url)
-                    # Replace URL with string 'web-url'
-                    eda_data['message'] = eda_data['message'].replace(pattern_url, 'web-url', regex=True)
-                    
-                    # Clean text with clean_text() function
-                    eda_data['clean_tweet'] = eda_data['message'].apply(lambda x:clean_text(x))
-
-                    # Tokenize tweets with nltk 
-                    #tokeniser = word_tokenize()
-                    eda_data['tokens'] = eda_data['message'].apply(word_tokenize)
-                    eda_data['tweet_length'] = eda_data['tokens'].str.len()
-                    # Keep only alpha numeric characters
-                    eda_data['alphanum_only'] = eda_data['message']
-                    eda_data['alphanum_only'] = eda_data['alphanum_only'].replace(r'[^a-z0-9]', '', regex=True)
-                    
-
-                    # Tweet Character count column
-                    eda_data['character_count'] = eda_data['message'].apply(lambda c: len(c))
-                    #repeat for punctuation
-                    eda_data['punctuation_count'] = eda_data['message'].apply(lambda x: len([i for i in str(x) if i in string.punctuation]))
 
                     # Introduce approach
                     st.markdown('When conducting Exploratory Data Analysis, we try and look at the data from all angles, by inspecting and visualising to extract any insights that we can. This can sometimes give surprising results, and as such we try to explore any possible connections, as well as outliers, or any group/class/type that differs from the rest. In this app we will be exploring the distributions of our data from different aspects, combined with what makes it unique, or where the data is strengthened by similarities. ')
@@ -243,6 +262,23 @@ def main():
                     plt.xlabel('Count of Punctuation')
                     plt.ylabel('Density')
                     st.pyplot()
+
+            #call wordcloud generator
+            if st.checkbox('generate wordclouds'):
+
+                    sent = list(eda_data['sentiment'].unique())
+                    dft = eda_data.groupby('sentiment')['clean_tweet'].apply(' '.join)
+                    for s in sent:
+                            fig, ax = plt.subplots()
+                            text = dft[s]
+                            wordcloud = WordCloud(background_color='white', max_words=100, max_font_size=50).generate(text)
+                            #plt.figure()
+                            plt.imshow(wordcloud, interpolation='bilinear')
+                            plt.title('Tweets under {} Class'.format(s))
+                            plt.axis('off')
+                            
+                            st.pyplot()
+
 
 
     
