@@ -85,7 +85,7 @@ def clean_text(text):
         text = re.sub('\w*\d\w*', '', text)
         return text
 
-@st.cache
+@st.cache(persist=True)
 def prep_eda_df(df):
 
         #preprocess eda data
@@ -109,8 +109,8 @@ def prep_eda_df(df):
         eda_data['character_count'] = eda_data['message'].apply(lambda c: len(c))
         #repeat for punctuation
         eda_data['punctuation_count'] = eda_data['message'].apply(lambda x: len([i for i in str(x) if i in string.punctuation]))
-        
-        return eda_data
+        eda_df = eda_data.copy()
+        return eda_df
 
 eda_data = prep_eda_df(raw)
 
@@ -125,8 +125,8 @@ def wordcloud_gen(df, target, values):
             plt.title('Tweets under {} Class'.format(s))
             plt.axis('off')
         return
-
-#@st.cache(persist=True)   # Improve speed and cache data
+ 
+#@st.cache(persist=True)   # Improve speed and cache
 # The main function where we will build the actual app
 def main():
     """Tweet Classifier App with Streamlit """
