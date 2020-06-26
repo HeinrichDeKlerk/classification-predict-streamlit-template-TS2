@@ -114,6 +114,20 @@ def prep_eda_df(df):
 
 eda_data = prep_eda_df(raw)
 
+sent_dict = {-1 : 'Anti', 0 : 'Neutral', 1 : 'Pro', 2 : 'News'}
+
+def sent_kde_plots(df, values, target):
+        fig, ax = plt.subplots()
+        col = list(df[target].unique())
+
+        for c in col:
+            sns.kdeplot(df[values][df[target]==c], shade = True, label=sent_dict.get(c) )
+        
+        plt.xlabel(values)
+        plt.ylabel('Density')
+        plt.title('Distribution of Tweet {}'.format(values))
+        return
+
 def wordcloud_gen(df, target, values):
         sent = list(df[target].unique())
         dft = train_data.groupby(target)[values].apply(' '.join)
@@ -183,7 +197,11 @@ def main():
     # Building EDA and Insights page
     #eda = st.sidebar.select()
     if selection == "EDA and Findings":
-            st.info("Summarize the main characters of the data and gain insight on what the data can tell us. In this regard get more understanding about what it represents and how to apply it.")
+            st.info('This page is dedicated to Exploratory Data Analysis and insights gained form it.')
+
+            st.markdown('### **Exploratory Data Aanalysis**')
+            st.markdown('When conducting Exploratory Data Analysis, we try and look at the data from all angles, by inspecting and visualising to extract any insights that we can. This can sometimes give surprising results, and as such we try to explore any possible connections, as well as outliers, or any group/class/type that differs from the rest. In this app we will be exploring the distributions of our data from different aspects, combined with what makes it unique, or where the data is strengthened by similarities. <br> In doing so we summarize the main characters of the data and gain insight on what the data can tell us. In this regard get more understanding about what it represents and how to apply it.', unsafe_allow_html=True)
+
             if st.checkbox("Preview DataFrame"):
                     if st.button("Tail"):
                         st.write(raw.tail())
@@ -197,15 +215,15 @@ def main():
 
             # Sentiment Distribution
             fig, ax = plt.subplots(figsize=(10, 5))
-            graph = sns.countplot(x = 'sentiment', data = raw)
+            #graph = sns.countplot(x = 'sentiment', data = raw)
             graph = sns.countplot(x = 'label', data = raw)
             plt.title('Distribution of Sentiment classes count')
             st.pyplot()
             
            
             # Viewing each sentiment
-            sentiment = raw["label"].unique()
-            selected_sentiment = st.multiselect("View analysis by sentiment",sentiment)
+            sentiment = raw["label"].unique().tolist()
+            selected_sentiment = st.multiselect("View analysis by sentiment",sentiment, default=sentiment)
     
 
             # mask to filter dataframe
@@ -213,60 +231,32 @@ def main():
             data = raw[mask_sentiment]
             st.write(data)
 
+            df = eda_data[mask_sentiment]
+
+            st.subheader("Visualisations")
+
             
             if st.checkbox('View Tweet length distributions'):
 
-                    # Introduce approach
-                    st.markdown('When conducting Exploratory Data Analysis, we try and look at the data from all angles, by inspecting and visualising to extract any insights that we can. This can sometimes give surprising results, and as such we try to explore any possible connections, as well as outliers, or any group/class/type that differs from the rest. In this app we will be exploring the distributions of our data from different aspects, combined with what makes it unique, or where the data is strengthened by similarities. ')
-
                     st.markdown('The first of these explorations will be in the length of various parts of the Tweet body')
 
-                    # Create graph for Tweet character distribution
-                    fig, ax = plt.subplots()
-                    #create graphs
-                    sns.kdeplot(eda_data['character_count'][eda_data['sentiment'] == -1], shade = True, label = 'anti')
-                    sns.kdeplot(eda_data['character_count'][eda_data['sentiment'] == 0], shade = True, label = 'neutral')
-                    sns.kdeplot(eda_data['character_count'][eda_data['sentiment'] == 1], shade = True, label = 'pro')
-                    sns.kdeplot(eda_data['character_count'][eda_data['sentiment'] == 2], shade = True, label = 'Fact')
-                    #set title and labels plot
-                    plt.title('Distribution of Tweet Character Count')
-                    plt.xlabel('Count of Characters')
-                    plt.ylabel('Density')
+                    
+                    #generate tweet length graph
+                    sent_kde_plots(df, 'tweet_length', 'sentiment')
                     st.pyplot()
 
-
-
-                    # Create graph for Tweet length distribution
-                    fig, ax = plt.subplots()
-                    #create graphs
-                    sns.kdeplot(eda_data['tweet_length'][eda_data['sentiment'] == -1], shade = True, label = 'anti')
-                    sns.kdeplot(eda_data['tweet_length'][eda_data['sentiment'] == 0], shade = True, label = 'neutral')
-                    sns.kdeplot(eda_data['tweet_length'][eda_data['sentiment'] == 1], shade = True, label = 'pro')
-                    sns.kdeplot(eda_data['tweet_length'][eda_data['sentiment'] == 2], shade = True, label = 'Fact')
-                    #set title and plot
-                    plt.title('Distribution of Tweet Word Count')
-                    plt.xlabel('Count of words')
-                    plt.ylabel('Density')
+                    #generate character count graph
+                    sent_kde_plots(df, 'character_count', 'sentiment')
                     st.pyplot()
 
-
-                    # Create graph for Tweet length distribution
-                    fig, ax = plt.subplots()
-                    #create graphs
-                    sns.kdeplot(eda_data['punctuation_count'][eda_data['sentiment'] == -1], shade = True, label = 'anti')
-                    sns.kdeplot(eda_data['punctuation_count'][eda_data['sentiment'] == 0], shade = True, label = 'neutral')
-                    sns.kdeplot(eda_data['punctuation_count'][eda_data['sentiment'] == 1], shade = True, label = 'pro')
-                    sns.kdeplot(eda_data['punctuation_count'][eda_data['sentiment'] == 2], shade = True, label = 'Fact')
-                    #set title and plot
-                    plt.title('Distribution of Tweet Punctuation Count')
-                    plt.xlabel('Count of Punctuation')
-                    plt.ylabel('Density')
+                    #generate punctuation count graph
+                    sent_kde_plots(df, 'punctuation_count', 'sentiment')
                     st.pyplot()
 
             #call wordcloud generator
             if st.checkbox('generate wordclouds'):
 
-                    sent = list(eda_data['sentiment'].unique())
+                    sent = list(df['sentiment'].unique())
                     dft = eda_data.groupby('sentiment')['clean_tweet'].apply(' '.join)
                     for s in sent:
                             fig, ax = plt.subplots()
@@ -276,7 +266,6 @@ def main():
                             plt.imshow(wordcloud, interpolation='bilinear')
                             plt.title('Tweets under {} Class'.format(s))
                             plt.axis('off')
-                            
                             st.pyplot()
 
 
