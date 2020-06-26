@@ -50,7 +50,6 @@ from PIL import Image
 import plotly.graph_objects as go
 
 matplotlib.use("Agg")
-plt.style.use('ggplot')
 
 # Vectorizer
 news_vectorizer = open("resources/tfidfvect.pkl","rb")
@@ -154,7 +153,7 @@ def main():
     # Creating sidebar 
     # you can create multiple pages this way
     st.sidebar.title("Pages")
-    selection = st.sidebar.radio(label="",options = ["Information","EDA and Findings","Prediction"])
+    selection = st.sidebar.radio(label="",options = ["Information","EDA and Insights","Prediction"])
     
     # Building out the "Information" page
     if selection == "Information":
@@ -196,11 +195,19 @@ def main():
         
     # Building EDA and Insights page
     #eda = st.sidebar.select()
-    if selection == "EDA and Findings":
+    if selection == "EDA and Insights":
             st.info('This page is dedicated to Exploratory Data Analysis and insights gained form it.')
+            
+            # Adding to sidebar 
+            st.sidebar.title("EDA and Insights")
+            st.sidebar.info('Use the multislect box below to view graphs by sentiment, Insight text applies to graphs with all selected sentiments.')
+            sentiment = raw["label"].unique().tolist()
+            select_sent = st.sidebar.multiselect('View Analysis by sentiment',sentiment, default=sentiment)
 
             st.markdown('### **Exploratory Data Aanalysis**')
             st.markdown('When conducting Exploratory Data Analysis, we try and look at the data from all angles, by inspecting and visualising to extract any insights that we can. This can sometimes give surprising results, and as such we try to explore any possible connections, as well as outliers, or any group/class/type that differs from the rest. In this app we will be exploring the distributions of our data from different aspects, combined with what makes it unique, or where the data is strengthened by similarities. <br> In doing so we summarize the main characters of the data and gain insight on what the data can tell us. In this regard get more understanding about what it represents and how to apply it.', unsafe_allow_html=True)
+            
+            
 
             if st.checkbox("Preview DataFrame"):
                     if st.button("Tail"):
@@ -212,28 +219,31 @@ def main():
             st.subheader("Description of Sentiment Classes")
             descrip_image = Image.open("resources/imgs/climate_data_sentiment_description.png")
             st.image(descrip_image, use_column_width=True)
+            
+            # mask to filter dataframe
+            mask_sentiment = raw['label'].isin(select_sent)
+            data = raw[mask_sentiment]
+
+
+            st.markdown('### Data Distribution ###')
 
             # Sentiment Distribution
             fig, ax = plt.subplots(figsize=(10, 5))
             #graph = sns.countplot(x = 'sentiment', data = raw)
-            graph = sns.countplot(x = 'label', data = raw)
+            graph = sns.countplot(x = 'label', data=data)
             plt.title('Distribution of Sentiment classes count')
             st.pyplot()
             
-           
+            # Insight
+            st.markdown('More than half of the tweets , precisely 50,76%, belong to class 1. This indicates that the majority of tweets collected support the belief that man-made climate change exists. Conversely, 8.58% of the tweets collected are class -1, which represents tweets that do not believe in man-made climate change. Tweets that link to factual news about climate change comprise 24,89% whilst tweets which are neutral (neither supports nor refutes the belief of man-made climate change) make up 15,77% of the dataset. These are represented by the classes 2 and 0 respectively.<br>The class imbalance will need to be addressed to avoid the model being biased towards classifying sentiments as the majority class because the model will be well-versed in identifying it.', unsafe_allow_html=True)
             # Viewing each sentiment
-            sentiment = raw["label"].unique().tolist()
-            selected_sentiment = st.multiselect("View analysis by sentiment",sentiment, default=sentiment)
+            #sentiment = raw["label"].unique().tolist()
+            #selected_sentiment = st.multiselect("View analysis by sentiment",sentiment, default=sentiment)
     
-
-            # mask to filter dataframe
-            mask_sentiment = raw['label'].isin(selected_sentiment)
-            data = raw[mask_sentiment]
-            st.write(data)
 
             df = eda_data[mask_sentiment]
 
-            st.subheader("Visualisations")
+            st.markdown("### **Visualisations** ###")
 
             
             if st.checkbox('View Tweet length distributions'):
@@ -245,16 +255,26 @@ def main():
                     sent_kde_plots(df, 'tweet_length', 'sentiment')
                     st.pyplot()
 
+                    st.markdown('Looking at the number of words per tweet, although classes 0 and 1 have the same maximum number of words per tweet at 31 words, classes -1 and 1 have the highest average number of words per tweet at ~19 words. This suggests that people that sent out tweets which are anti and pro man-made climate change send out tweets with more words. News tweets generally have the least number of words with a maximum of 26 and an average of ~16 words per tweet. They do however also display more of a normal distribution, insinuating that news tweets are more consistent in the number of words. The number of words of tweets which are classified as neutral have the greatest distribution with a standard deviation of ~6 words, they vary from "few" to "many" words in a tweet.')
+
                     #generate character count graph
                     sent_kde_plots(df, 'character_count', 'sentiment')
                     st.pyplot()
+
+                    st.write('A similar pattern as established by the number of words per tweet is displayed by the number of characters per tweet. Classes 1 and 0 have the the first and second maximum number of characters per tweet at at 208 and 166 characters respectively. However, classes 1 and -1 have the highest average number of characters per tweet at ~127 and ~124 characters. A slight difference is that class 2 tweets are on average longer than neutral tweets.')
 
                     #generate punctuation count graph
                     sent_kde_plots(df, 'punctuation_count', 'sentiment')
                     st.pyplot()
 
+                    st.markdown('The amount of punctuaton displays a number of outliers in each class at 36, 25, 58 and 20 for classes -1, 0, 1 and 2 whilst the averages for each class are ~ 8, 7, 8 and 9. There is a miniscule difference in the means therefore the number of punctuation per tweet can not be as an unique identifier for any of the sentiment classes. <br> Despite classes -1 and 0 having tweets which have the most characters and words, the differences between these two classes and the other classes, and additonally themselves, are not significant enough to use these two characteristics as features when classifying between the four classes in question. As mentioned above, there are no punctuation patterns that are significant to either class.', unsafe_allow_html=True)
+            
+            st.markdown('### **Wordclouds!** ###')
+
             #call wordcloud generator
             if st.checkbox('generate wordclouds'):
+ 
+                    st.markdown('Upon analysis of all the sentiment classes, "climate change", "RT", "https", "co" and "global warming" are the most popular words/phrases. Even within the individual sentiment classes, the same five words/phrases are the most common.')
 
                     sent = list(df['sentiment'].unique())
                     dft = eda_data.groupby('sentiment')['clean_tweet'].apply(' '.join)
@@ -267,8 +287,7 @@ def main():
                             plt.title('Tweets under {} Class'.format(s))
                             plt.axis('off')
                             st.pyplot()
-
-
+           
 
     
     st.sidebar.title("About")
