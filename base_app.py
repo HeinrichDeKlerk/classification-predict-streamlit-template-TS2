@@ -39,6 +39,7 @@ from markdown import markdown
 from nltk.tokenize import word_tokenize
 import string
 import re
+import spacy
 
 # Visual dependencies
 import matplotlib
