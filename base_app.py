@@ -1,7 +1,7 @@
 """
 
     Simple Streamlit webserver application for serving developed classification
-	models.
+        models.
 
     models.
     Author: Explore Data Science Academy.
@@ -14,12 +14,12 @@
     ---------------------------------------------------------------------
 
     Description: This file is used to launch a minimal streamlit web
-	application. You are expected to extend the functionality of this script
-	as part of your predict project.
+        application. You are expected to extend the functionality of this script
+        as part of your predict project.
 
-	For further help with the Streamlit framework, see:
+        For further help with the Streamlit framework, see:
 
-	https://docs.streamlit.io/en/latest/
+        https://docs.streamlit.io/en/latest/
 
     application. You are expected to extend the functionality of this script
     as part of your predict project.
@@ -29,16 +29,26 @@
 # Streamlit dependencies
 import streamlit as st
 import joblib,os
-
+import pickle
+from markdown import markdown
 
 # Data dependencies
 import pandas as pd
-from markdown import markdown
+import numpy as np
 
-# Text classification
-from nltk.tokenize import word_tokenize
+# Text processing
+import spacy
+import nltk
+nltk.download('stopwords')
+from nltk.corpus import stopwords
+from nltk.tokenize import TweetTokenizer, word_tokenize
 import string
 import re
+
+# Data processing
+from sklearn.utils import resample
+from sklearn.feature_extraction import text
+from sklearn.model_selection import train_test_split
 
 # Visual dependencies
 import matplotlib
@@ -50,27 +60,34 @@ from PIL import Image
 import plotly.graph_objects as go
 
 matplotlib.use("Agg")
+plt.style.use('ggplot')
 
-# Vectorizer
-news_vectorizer = open("resources/tfidfvect.pkl","rb")
-tweet_cv = joblib.load(news_vectorizer) # loading your vectorizer from the pkl file
+# Create a spaCy tokenizer
+spacy.load('en')
+lemmatizer = spacy.lang.en.English()
+
+def tokenize(text):
+    tokens = lemmatizer(text)
+    return [token.lemma_ for token in tokens]
+
+# Load necessary data
+file = open("resources/mod_and_vect.pkl", "rb")
+    TF_1 = pickle.load(file)
+    TF_2 = pickle.load(file)
+    CV_2 = pickle.load(file)
+    NL_SVM_TF1 = pickle.load(file)
+    LR_TF2 = pickle.load(file)
+    LSVM = pickle.load(file)
+    LRCV = pickle.load(file)
+file.close()
 
 # Load your raw data
 raw = pd.read_csv("resources/kaggle_train.csv")
 
-
-# label the sentiments
-def sentiment_label(df_):
-        if df_['sentiment'] == 2:
-                return "News"
-        elif df_['sentiment'] == 1:
-                return "Pro"
-        elif df_['sentiment'] == 0:
-                return "Neutral"
-        elif df_['sentiment'] == -1:
-                return "Anti"
-
-raw["label"] =  raw.apply(sentiment_label, axis=1)
+def get_key(val,my_dict):
+	for key,value in my_dict.items():
+		if val == value:
+			return key
 
 # define custom functions to be used
 @st.cache
@@ -137,9 +154,22 @@ def wordcloud_gen(df, target, values):
             plt.imshow(wordcloud, interpolation='bilinear')
             plt.title('Tweets under {} Class'.format(s))
             plt.axis('off')
-        return
- 
-#@st.cache(persist=True)   # Improve speed and cache
+        return        
+          
+# label the sentiments
+def sentiment_label(df_):
+        if df_['sentiment'] == 2:
+                return "News"
+        elif df_['sentiment'] == 1:
+                return "Pro"
+        elif df_['sentiment'] == 0:
+                return "Neutral"
+        elif df_['sentiment'] == -1:
+                return "Anti"
+
+raw["label"] =  raw.apply(sentiment_label, axis=1)
+
+
 # The main function where we will build the actual app
 def main():
     """Tweet Classifier App with Streamlit """
@@ -174,6 +204,160 @@ def main():
             if st.checkbox('Show raw data'): # data is hidden if box is unchecked
                     st.write(raw) # will write the df to the page
     	
+    # Building out the predication page
+    if selection == "Prediction":
+                st.info("Prediction with ML Models")
+                raw = pd.read_csv("resources/train.csv")
+                # Detect and remove duplicate rows
+                raw = raw.drop_duplicates(subset=['message'])
+
+        # Remove blanks
+                def remove_blanks(df):
+                        blanks = []
+                        for index, tweet in enumerate(df['message']):
+                                if type(tweet) == str:
+                                        if tweet in ['', ' ']:
+                                                blanks.append(index)
+                        return df.drop(blanks)
+                raw = remove_blanks(raw)
+                 
+                # Remove special characters
+                def clean_text(text):
+                        text = str(text).lower()
+                        text = re.sub('\[.*?\]', '', text) 
+                        text = re.sub('https?://\S+|www\.\S+', 'URL', text)
+                        text = re.sub('<.*?>+', '', text)
+                        text = re.sub('[%s]' % re.escape(string.punctuation), '', text)
+                        text = re.sub('\n', '', text)
+                        text = re.sub('\w*\d\w*', '', text)
+                        return text
+                raw['clean_tweet'] = raw['message'].apply(lambda x: clean_text(x))
+
+                # Remove stop-words
+                stop_words = stopwords.words('english')  # Assign stop_words list
+                def remove_stopword(text):
+                        return [word for word in text.split() if word not in stop_words]
+                raw['clean_tweet'] = raw['clean_tweet'].apply(lambda x: remove_stopword(x))
+
+                # Join text
+                def join_text(text):
+                        text = ' '.join(text)
+                        return text
+                raw['clean_tweet'] = raw['clean_tweet'].apply(lambda x: join_text(x))
+
+                # Assign feature and response variables
+                X = raw['clean_tweet']
+                y = raw['sentiment']
+
+                # Addressing imbalance
+                heights = [len(y[y == label]) for label in [0, 1, 2, -1]]
+                bars = pd.DataFrame(zip(heights, [0,1,2,-1]), columns=['heights','labels'])
+                bars = bars.sort_values(by='heights',ascending=True)
+
+                # Let's pick a class size of roughly half the size of the largest size
+                class_size = 3500
+                bar_label_df = bars.set_index('labels')
+                resampled_classes = []
+
+                for label in [0, 1, 2, -1]:
+                # Get number of observations from this class
+                        label_size = bar_label_df.loc[label]['heights']
+
+                # If label_size < class size the upsample, else downsample
+                        if label_size < class_size:
+                                # Upsample
+                                label_data = raw[['clean_tweet', 'sentiment']][raw['sentiment'] == label]
+                                label_resampled = resample(label_data,
+                                                                            # sample with replacement
+                                                        # (we need to duplicate observations)
+                                                        replace=True,
+                                                        # number of desired samples
+                                                        n_samples=class_size,
+                                                        random_state=27)
+                        else:
+                        # Downsample
+                                label_data = raw[['clean_tweet', 'sentiment']][raw['sentiment'] == label]
+                                label_resampled = resample(label_data,
+                                                # sample without replacement
+                                                        # (no need for duplicate observations)
+                                                        replace=False,
+                                                        # number of desired samples
+                                                        n_samples=class_size,
+                                                        random_state=27)
+
+                        resampled_classes.append(label_resampled)
+
+                # Assign feature and response variables from resampled data
+                resampled_data = np.concatenate(resampled_classes, axis=0)
+
+                X_resampled = resampled_data[:, :-1]
+                y_resampled = resampled_data[:, -1]
+
+                ## Plot resampled data against original data
+                #if st.checkbox("View plot of resampled data"):
+                #        heights = [len(y_resampled[y_resampled == label]) for label in [0, 1, 2, -1]]
+                #        bars_resampled = pd.DataFrame(zip(heights, [0, 1, 2, -1]),
+                #                                                                          columns=['heights', 'labels'])
+                #        bars_resampled = bars_resampled.sort_values(by='heights', ascending=True)
+
+                #        fig = go.Figure(data=[
+                #                                        go.Bar(name='Original', x=[-1, 0, 2, 1], y=bars['heights']),
+                #                                        go.Bar(name='Resampled', x=[-1, 0, 2, 1], y=bars_resampled['heights'])
+                #        ])
+                #        fig.update_layout(xaxis_title="Sentiment", yaxis_title="Sample size")
+                #        st.pyplot()
+
+                df_resampled = pd.DataFrame(X_resampled.reshape(-1,1))
+                df_resampled.columns = ['tweet']
+                df_resampled['sentiment'] = y_resampled
+                df_resampled['sentiment'] = df_resampled['sentiment'].astype('int')
+
+                # Splitting data
+                X_train, X_test, y_train, y_test = train_test_split(
+                                                                                   df_resampled['tweet'].values,
+                                                                                   df_resampled['sentiment'].values,
+                                                                                   test_size=0.1, random_state=42)
+
+                # Create a spaCy tokenizer
+                spacy.load('en')
+                lemmatizer = spacy.lang.en.English()
+
+                def tokenize(text):
+                        tokens = lemmatizer(text)
+                        return [token.lemma_ for token in tokens]
+
+                # Creating a text box for user input
+                tweet_text = st.text_area("Enter Text","Type Here")
+
+                models_dict = {'Linear Support Vector Classifier':LSVM, 
+                            'Non-Linear Support Vector Classifier':NL_SVM_TF1, 
+                               'Logistic Regression CV':LRCV, 
+                               'Logistic Regression TFiDF':LR_TF2}
+                
+                choice = st.selectbox("Please choose a Classification Model",list(models_dict.keys()))
+                model = models_dict.get(choice)
+
+
+                mod_vect_dict = {LSVM:CV_2, NL_SVM_TF1:TF_1, LRCV:CV_2, LR_TF2:TF_2} 
+
+                if st.button("Classify"):
+                        # Transforming user input with vectorizer
+                        vect = mod_vect_dict.get(model)
+                        vect_text = vect.transform([tweet_text]).toarray()
+                        predictor = model
+                        prediction = predictor.predict(vect_text)
+
+                        # When model has successfully run, will print prediction
+                        # You can use a dictionary or similar structure to make this output
+                        # more human interpretable.
+                        pred_labels = {"Anti Climate Change" : -1,
+                                "Neutral toward Climate Change" : 0,
+                                "Pro Climate Change" : 1,
+                                "News about Climate Change" : 2}
+                        
+                        result = get_key(prediction, pred_labels)
+                        st.success("Text Categorized as: {}".format(result))
+        
     # Building out the predication page
     if selection == "Prediction":
             st.info("Prediction with ML Models")
