@@ -1,0 +1,3 @@
+#### NLP stands for **N**atural **L**anguage **P**rocessing
+It is a method used to take text as we use it daily, with messy spelling, abbreviations and all, and process it into something a computer can understand and learn from. We have used a method similar to the image below to train various Machine learning models to discern wether a specific piece of text is Pro, Anti or Neutral climate change. It can even attempt to classify if text links to News about climate change.
+Go ahead, in the text box below you can try it out for yourself.
