@@ -1,0 +1,28 @@
+Vectorizers contained in pickle file
+
+cv1 = CV_1
+cv2 = CV_2
+cv3 = CV_3
+tf1 = TF_1
+tf2 = TF_2
+tf3 = TF_3
+
+Vect_param_dict = { "CV_1" : CountVectorizer(max_df=0.8, min_df=3,
+			     		     tokenizer=tokenize, 
+					     stop_words=stop_words),
+		    "CV_2" : CountVectorizer(ngram_range=(1, 3), max_df=0.8,
+		    			     min_df=3, tokenizer=tokenize, 
+					     stop_words=stop_words),
+		    "CV_3" : CountVectorizer(ngram_range=(2, 3), max_df=0.8,
+		    			     min_df=3, tokenizer=tokenize,
+					     stop_words=stop_words),
+		    "TF_1" : TfidfVectorizer(max_df=0.8, min_df=3,
+		    			     tokenizer=tokenize, 
+					     stop_words=stop_words),
+		    "TF_2" : TfidfVectorizer(ngram_range=(1, 3), max_df=0.8,
+		    		    	     min_df=3, tokenizer=tokenize,
+					     stop_words=stop_words),
+		    "TF_3" : TfidfVectorizer(ngram_range=(2, 3), max_df=0.8,
+		    			     min_df=3, tokenizer=tokenize,
+					     stop_words=stop_words)
+		    }
