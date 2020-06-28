@@ -72,17 +72,18 @@ def tokenize(text):
 
 # Load necessary data
 file = open("resources/mod_and_vect.pkl", "rb")
-    TF_1 = pickle.load(file)
-    TF_2 = pickle.load(file)
-    CV_2 = pickle.load(file)
-    NL_SVM_TF1 = pickle.load(file)
-    LR_TF2 = pickle.load(file)
-    LSVM = pickle.load(file)
-    LRCV = pickle.load(file)
+TF_1 = pickle.load(file)
+TF_2 = pickle.load(file)
+CV_2 = pickle.load(file)
+NL_SVM_TF1 = pickle.load(file)
+LR_TF2 = pickle.load(file)
+LSVM = pickle.load(file)
+LRCV = pickle.load(file)
 file.close()
 
 # Load your raw data
-raw = pd.read_csv("resources/kaggle_train.csv")
+read_and_cache_csv = st.cache(pd.read_csv, allow_output_mutation=True)
+raw = read_and_cache_csv("resources/kaggle_train.csv")
 
 def get_key(val,my_dict):
 	for key,value in my_dict.items():
@@ -358,30 +359,14 @@ def main():
                         result = get_key(prediction, pred_labels)
                         st.success("Text Categorized as: {}".format(result))
         
-    # Building out the predication page
-    if selection == "Prediction":
-            st.info("Prediction with ML Models")
-            # Creating a text box for user input
-            tweet_text = st.text_area("Enter Text","Type Here")
-    
-            if st.button("Classify"):
-                    # Transforming user input with vectorizer
-                    vect_text = tweet_cv.transform([tweet_text]).toarray()
-                    # Load your .pkl file with the model of your choice + make predictions
-                    # Try loading in multiple models to give the user a choice
-                    predictor = joblib.load(open(os.path.join("resources/Logistic_regression.pkl"),"rb"))
-                    prediction = predictor.predict(vect_text)
-    
-                    # When model has successfully run, will print prediction
-                    # You can use a dictionary or similar structure to make this output
-                    # more human interpretable.
-                    st.success("Text Categorized as: {}".format(prediction))
-        
     # Building EDA and Insights page
     #eda = st.sidebar.select()
     if selection == "EDA and Insights":
             st.info('This page is dedicated to Exploratory Data Analysis and insights gained form it.')
             
+            #load data
+            raw = read_and_cache_csv("resources/kaggle_train.csv")
+
             # Adding to sidebar 
             st.sidebar.title("EDA and Insights")
             st.sidebar.info('Use the multislect box below to view graphs by sentiment, Insight text applies to graphs with all selected sentiments.')
@@ -493,4 +478,4 @@ def main():
 
 # Required to let Streamlit instantiate our web app.  
 if __name__ == '__main__':
-	main()
+    main()
