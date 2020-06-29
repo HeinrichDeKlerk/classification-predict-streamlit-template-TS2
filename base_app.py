@@ -197,7 +197,7 @@ def main():
     # Creating sidebar
     # you can create multiple pages this way
     st.sidebar.title("Pages")
-    selection = st.sidebar.radio(label="", options=["Information", "EDA and Insights", "Prediction", "Technical"])
+    selection = st.sidebar.radio(label="", options=["Information", "EDA and Insights", "Prediction"])
 
     # Building out the "Information" page
     if selection == "Information":
@@ -378,16 +378,6 @@ def main():
                             plt.title('Tweets under {} Class'.format(s))
                             plt.axis('off')
                             st.pyplot()
-    
-    if selection == "Technical":
-
-            ml_img = Image.open("resources/imgs/ml_img.png")
-            st.image(ml_img, use_column_width=True)
- 
-            st.info("Here you will find a little more technical info on the models available for prediction")
-
-            tech_inf = markdown(open('resources/vector_model_exp.md').read())
-            st.markdown(tech_inf, unsafe_allow_html=True)
 
     st.sidebar.title("About")
     st.sidebar.info(
