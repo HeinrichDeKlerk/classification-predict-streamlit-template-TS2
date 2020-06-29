@@ -59,7 +59,6 @@ from bs4 import BeautifulSoup
 from PIL import Image
 import plotly.graph_objects as go
 
-nltk.download('stopwords')
 matplotlib.use("Agg")
 plt.style.use('ggplot')
 
