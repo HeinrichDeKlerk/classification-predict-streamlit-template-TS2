@@ -59,23 +59,33 @@ from bs4 import BeautifulSoup
 from PIL import Image
 import plotly.graph_objects as go
 
-# Visual dependencies
+
 matplotlib.use("Agg")
 plt.style.use('ggplot')
 
-# Define spacy dependencies
+# Create a spaCy tokenizer
 spacy.load('en')
 lemmatizer = spacy.lang.en.English()
+
+
+def tokenize(text):
+    tokens = lemmatizer(text)
+    return [token.lemma_ for token in tokens]
+
+# Load necessary data
+file = open("resources/mod_and_vect.pkl", "rb")
+TF_1 = pickle.load(file)
+TF_2 = pickle.load(file)
+CV_2 = pickle.load(file)
+NL_SVM_TF1 = pickle.load(file)
+LR_TF2 = pickle.load(file)
+LSVM = pickle.load(file)
+LRCV = pickle.load(file)
+file.close()
 
 # Load your raw data
 read_and_cache_csv = st.cache(pd.read_csv, allow_output_mutation=True)
 raw = read_and_cache_csv("resources/kaggle_train.csv")
-
-
-# Define custom functions
-def tokenize(text):
-    tokens = lemmatizer(text)
-    return [token.lemma_ for token in tokens]
 
 
 def get_key(val, my_dict):
@@ -84,6 +94,7 @@ def get_key(val, my_dict):
             return key
 
 
+# define custom functions to be used
 @st.cache
 def clean_text(text):
         text = str(text).lower()
@@ -123,8 +134,9 @@ def prep_eda_df(df):
         eda_df = eda_data.copy()
         return eda_df
 
-# Prepare eda data
 eda_data = prep_eda_df(raw)
+
+sent_dict = {-1: 'Anti', 0: 'Neutral', 1: 'Pro', 2: 'News'}
 
 
 def sent_kde_plots(df, values, target):
@@ -165,22 +177,6 @@ def sentiment_label(df_):
         elif df_['sentiment'] == -1:
                 return "Anti"
 
-
-# Load pickled models and Vectorizers
-file = open("resources/mod_and_vect.pkl", "rb")
-TF_1 = pickle.load(file)
-TF_2 = pickle.load(file)
-CV_2 = pickle.load(file)
-NL_SVM_TF1 = pickle.load(file)
-LR_TF2 = pickle.load(file)
-LSVM = pickle.load(file)
-LRCV = pickle.load(file)
-file.close()
-
-# Define sentiment dictionary
-sent_dict = {-1: 'Anti', 0: 'Neutral', 1: 'Pro', 2: 'News'}
-
-# Apply string labels to sentiments
 raw["label"] = raw.apply(sentiment_label, axis=1)
 
 
@@ -197,13 +193,12 @@ def main():
     # Creating sidebar
     # you can create multiple pages this way
     st.sidebar.title("Pages")
-    selection = st.sidebar.radio(label="", options=["Information", "EDA and Insights", "Prediction"])
+    selection = st.sidebar.radio(label="", options=["Information", "EDA and Insights", "Prediction", "Technical"])
 
     # Building out the "Information" page
     if selection == "Information":
             st.info("With the change in time, consumers have become more conscious about acquiring products/services from brands that uphold certain values and ideals. They also consider the service provider's stances towards issues such as climate change. In order to appeal to these consumers, organisations should understand their sentiments. They need to understand how their products will be received whilst trying to decrease their environmental impact or carbon footprint. This can be achieved using Machine Learning.")
-            
-            raw = read_and_cache_csv('resources/kaggle_train.csv')
+
             # You can read a markdown file from supporting resources folder
             if st.button("What is Machine Learning"):
                     what_ml = (open('resources/what_is_ML.md').read())
@@ -227,69 +222,151 @@ def main():
 
     # Building out the predication page
     if selection == "Prediction":
+                st.info("Climate Change belief with ML Models utilising NLP")
+                st.subheader("What is NLP")
 
-            raw = read_and_cache_csv('resources/kaggle_train.csv')
-            st.info("Climate Change belief with ML Models utilising NLP")
-            if st.button("What is NLP?"):
+                what_nlp = markdown(open("resources/what_is_nlp.md").read())
+                st.markdown(what_nlp, unsafe_allow_html=True)
+                raw = pd.read_csv("resources/train.csv")
 
-                    what_nlp = markdown(open("resources/what_is_nlp.md").read())
-                    st.markdown(what_nlp, unsafe_allow_html=True)
-                    raw = pd.read_csv("resources/train.csv")
+                nlp_img = Image.open('resources/imgs/nlp_pipeline_img.png')
+                st.image(nlp_img, use_column_width=True)
 
-                    nlp_img = Image.open('resources/imgs/nlp_pipeline_img.png')
-                    st.image(nlp_img, use_column_width=True)
+                # Detect and remove duplicate rows
+                raw = raw.drop_duplicates(subset=['message'])
 
-            # Detect and remove duplicate rows
-            raw = raw.drop_duplicates(subset=['message'])
+        # Remove blanks
+                def remove_blanks(df):
+                        blanks = []
+                        for index, tweet in enumerate(df['message']):
+                                if type(tweet) == str:
+                                        if tweet in ['', ' ']:
+                                                blanks.append(index)
+                        return df.drop(blanks)
+                raw = remove_blanks(raw)
 
-            # Creating a text box for user input
-            tweet_text = st.text_area("Enter Text", "Type Here")
+                # Remove special characters
+                def clean_text(text):
+                        text = str(text).lower()
+                        text = re.sub('\[.*?\]', '', text)
+                        text = re.sub('https?://\S+|www\.\S+', 'URL', text)
+                        text = re.sub('<.*?>+', '', text)
+                        text = re.sub('[%s]' % re.escape(string.punctuation), '', text)
+                        text = re.sub('\n', '', text)
+                        text = re.sub('\w*\d\w*', '', text)
+                        return text
+                raw['clean_tweet'] = raw['message'].apply(lambda x: clean_text(x))
 
-            # Apply clean_text function
-            tweet_text = clean_text(tweet_text)
+                # Remove stop-words
+                stop_words = stopwords.words('english')  # Assign stop_words list
 
-            # Remove stop-words
-            stop_words = stopwords.words('english')  # Assign stop_words list
+                def remove_stopword(text):
+                        return [word for word in text.split() if word not in stop_words]
+                raw['clean_tweet'] = raw['clean_tweet'].apply(lambda x: remove_stopword(x))
 
-            def remove_stopword(text):
-                    return [word for word in text.split() if word not in stop_words]
-            tweet_text = remove_stopword(tweet_text)
+                # Join text
+                def join_text(text):
+                        text = ' '.join(text)
+                        return text
+                raw['clean_tweet'] = raw['clean_tweet'].apply(lambda x: join_text(x))
 
-            # Join text
-            def join_text(text):
-                    text = ' '.join(text)
-                    return text
-            tweet_text = join_text(tweet_text)
+                # Assign feature and response variables
+                X = raw['clean_tweet']
+                y = raw['sentiment']
 
-            models_dict = {'Linear Support Vector Classifier': LSVM,
-                           'Non-Linear Support Vector Classifier': NL_SVM_TF1,
-                           'Logistic Regression CV': LRCV,
-                           'Logistic Regression TFiDF': LR_TF2}
+                # Addressing imbalance
+                heights = [len(y[y == label]) for label in [0, 1, 2, -1]]
+                bars = pd.DataFrame(zip(heights, [0, 1, 2, -1]), columns=['heights', 'labels'])
+                bars = bars.sort_values(by='heights',ascending=True)
 
-            choice = st.selectbox("Please choose a Classification Model",
-                                  list(models_dict.keys()))
-            
-            model = models_dict.get(choice)
+                # Let's pick a class size of roughly half the size of the largest size
+                class_size = 3500
+                bar_label_df = bars.set_index('labels')
+                resampled_classes = []
 
-            mod_vect_dict = {LSVM: CV_2, NL_SVM_TF1: TF_1, LRCV: CV_2, LR_TF2: TF_2}
+                for label in [0, 1, 2, -1]:
+                        # Get number of observations from this class
+                        label_size = bar_label_df.loc[label]['heights']
 
-            if st.button("Classify"):
-                    # Transforming user input with vectorizer
-                    vect = mod_vect_dict.get(model)
-                    vect_text = vect.transform([tweet_text]).toarray()
-                    predictor = model
-                    prediction = predictor.predict(vect_text)
+                        # If label_size < class size the upsample, else downsample
+                        if label_size < class_size:
+                                # Upsample
+                                label_data = raw[['clean_tweet', 'sentiment']][raw['sentiment'] == label]
+                                label_resampled = resample(label_data,
+                                                           # sample with replacement
+                                                           # (we need to duplicate observations)
+                                                           replace=True,
+                                                           # number of desired samples
+                                                           n_samples=class_size,
+                                                           random_state=27)
+                        else:
+                                # Downsample
+                                label_data = raw[['clean_tweet', 'sentiment']][raw['sentiment'] == label]
+                                label_resampled = resample(label_data,
+                                                           # sample without replacement
+                                                           # (no need for duplicate observations)
+                                                           replace=False,
+                                                           # number of desired samples
+                                                           n_samples=class_size,
+                                                           random_state=27)
 
-                    # When model has successfully run, will print prediction
-                    # You can use a dictionary or similar structure to make this output
-                    # more human interpretable.
-                    pred_labels = {"Anti Climate Change": -1,
-                                   "Neutral toward Climate Change": 0,
-                                   "Pro Climate Change": 1,
-                                   "News about Climate Change": 2}
+                        resampled_classes.append(label_resampled)
 
-                    result = get_key(prediction, pred_labels)
-                    st.success("Text Categorized as: {}".format(result))
+                # Assign feature and response variables from resampled data
+                resampled_data = np.concatenate(resampled_classes, axis=0)
+
+                X_resampled = resampled_data[:, :-1]
+                y_resampled = resampled_data[:, -1]
+
+                df_resampled = pd.DataFrame(X_resampled.reshape(-1, 1))
+                df_resampled.columns = ['tweet']
+                df_resampled['sentiment'] = y_resampled
+                df_resampled['sentiment'] = df_resampled['sentiment'].astype('int')
+
+                # Splitting data
+                X_train, X_test, y_train, y_test = train_test_split(df_resampled['tweet'].values,
+                                                                    df_resampled['sentiment'].values,
+                                                                    test_size=0.1, random_state=42)
+
+                # Create a spaCy tokenizer
+                spacy.load('en')
+                lemmatizer = spacy.lang.en.English()
+
+                def tokenize(text):
+                        tokens = lemmatizer(text)
+                        return [token.lemma_ for token in tokens]
+
+                # Creating a text box for user input
+                tweet_text = st.text_area("Enter Text", "Type Here")
+
+                models_dict = {'Linear Support Vector Classifier': LSVM,
+                               'Non-Linear Support Vector Classifier': NL_SVM_TF1,
+                               'Logistic Regression CV': LRCV,
+                               'Logistic Regression TFiDF': LR_TF2}
+
+                choice = st.selectbox("Please choose a Classification Model",
+                                      list(models_dict.keys()))
+                model = models_dict.get(choice)
+
+                mod_vect_dict = {LSVM: CV_2, NL_SVM_TF1: TF_1, LRCV: CV_2, LR_TF2: TF_2}
+
+                if st.button("Classify"):
+                        # Transforming user input with vectorizer
+                        vect = mod_vect_dict.get(model)
+                        vect_text = vect.transform([tweet_text]).toarray()
+                        predictor = model
+                        prediction = predictor.predict(vect_text)
+
+                        # When model has successfully run, will print prediction
+                        # You can use a dictionary or similar structure to make this output
+                        # more human interpretable.
+                        pred_labels = {"Anti Climate Change": -1,
+                                       "Neutral toward Climate Change": 0,
+                                       "Pro Climate Change": 1,
+                                       "News about Climate Change": 2}
+
+                        result = get_key(prediction, pred_labels)
+                        st.success("Text Categorized as: {}".format(result))
 
     # Building EDA and Insights page
     # eda = st.sidebar.select()
@@ -378,6 +455,16 @@ def main():
                             plt.title('Tweets under {} Class'.format(s))
                             plt.axis('off')
                             st.pyplot()
+    
+    if selection == "Technical":
+
+            ml_img = Image.open("resources/imgs/ml_img.png")
+            st.image(ml_img, use_column_width=True)
+ 
+            st.info("Here you will find a little more technical info on the models available for prediction")
+
+            tech_inf = markdown(open('resources/vector_model_exp.md').read())
+            st.markdown(tech_inf, unsafe_allow_html=True)
 
     st.sidebar.title("About")
     st.sidebar.info(
